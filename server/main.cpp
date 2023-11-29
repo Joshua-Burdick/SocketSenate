@@ -10,6 +10,8 @@
 int runTCPServer(TCPServer& server);
 int runUDPServer(UDPServer& server);
 void processBuffer(char* buffer);
+std::string setUsername(TCPServer& server);
+std::string setUsername(UDPServer& server);
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -52,15 +54,17 @@ int main(int argc, char* argv[]) {
 int runTCPServer(TCPServer& server) {
     server.accept();
     printf("\033[32mClient connected\033[0m\n\n");
+    
+    std::string username = setUsername(server);
 
     while (true) {
         char buffer[MAXSIZE] = {0};
         
         server.read(buffer, MAXSIZE);
-        printf("Client: %s\n", buffer);
+        printf("%s: %s\n", username.c_str(), buffer);
 
         if (strcmp(buffer, "exit") == 0) {
-            printf("\033[31mClient disconnected\033[0m\n\n");
+            printf("\033[31mClient \"%s\" disconnected\033[0m\n\n", username.c_str());
             return 0;
         }
         else if (strcmp(buffer, "shutdown") == 0) {
@@ -78,13 +82,15 @@ int runTCPServer(TCPServer& server) {
 }
 
 int runUDPServer(UDPServer& server) {
+    std::string username = setUsername(server);
+
     while (true) {
         char buffer[MAXSIZE] = {0};
         server.read(buffer, MAXSIZE);
-        printf("Client: %s\n", buffer);
+        printf("%s: %s\n", username.c_str(), buffer);
 
         if (strcmp(buffer, "exit") == 0) {
-            printf("\033[31mClient disconnected\033[0m\n\n");
+            printf("\033[31mClient \"%s\" disconnected\033[0m\n\n", username.c_str());
             return 0;
         }
         else if (strcmp(buffer, "shutdown") == 0) {
@@ -109,4 +115,26 @@ void processBuffer(char* buffer) {
         int ascii = (int)buffer[i];
         buffer[i] = i % 2 == 0 ? ascii + 4 : ascii - 4;
     }
+}
+
+std::string setUsername(TCPServer& server) {
+    char username[MAXSIZE] = {0};
+
+    server.read(username, MAXSIZE);
+    printf("Client Username Chosen: %s\n", username);
+
+    server.send("ACK", 4);
+
+    return username;
+}
+
+std::string setUsername(UDPServer& server) {
+    char username[MAXSIZE] = {0};
+
+    server.read(username, MAXSIZE);
+    printf("Client Username Chosen: %s\n", username);
+
+    server.send("ACK", 4);
+
+    return username;
 }
