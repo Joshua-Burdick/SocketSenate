@@ -13,7 +13,7 @@
 #define HISTORY_SIZE 10
 
 std::mutex clientMtx, ioMtx;
-std::list<char[MAXSIZE]> messages(HISTORY_SIZE);
+std::list<char*> messages;
 
 void runTCPClient(TCPClient& client);
 void runUDPClient(UDPClient& client);
@@ -121,21 +121,22 @@ void sendTCPMessage(TCPClient& client, bool& startupComplete) {
 
         {
             std::unique_lock<std::mutex> clientLock(clientMtx);
-            if (!startupComplete) startupComplete = true;
             client.send(buffer.c_str(), buffer.length());
         }
 
-        {
-            // TODO - Move to renderer thread
-            // std::unique_lock<std::mutex> ioLock(ioMtx);
-            if (buffer == "exit") {
-                printf("Exiting...\n");
-                return;
-            }
-            else if (buffer == "shutdown") {
-                printf("Shutting down server...\n\n");
-                return;
-            }
+        // TODO - Move to renderer thread
+        if (buffer == "exit") {
+            printf("Exiting...\n");
+            return;
+        }
+        else if (buffer == "shutdown") {
+            printf("Shutting down server...\n\n");
+            return;
+        }
+
+        if (!startupComplete) {
+            startupComplete = true;
+            std::this_thread::sleep_for(std::chrono::milliseconds(150));
         }
     }
 }
@@ -145,16 +146,16 @@ void readTCPResponse(TCPClient& client) {
         char response[MAXSIZE] = {0};
 
         {
+            std::unique_lock<std::mutex> ioLock(ioMtx);
             std::unique_lock<std::mutex> clientLock(clientMtx);
             client.read(response, MAXSIZE);
-            messages.push_back(response);
-            messages.pop_front();
-        }
+            // messages.push_back(response);
+            // messages.pop_front();
 
-        { // TODO - Move to renderer thread
-            std::unique_lock<std::mutex> ioLock(ioMtx);
             printf("Response: %s\n\n", response);
         }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
 }
 
